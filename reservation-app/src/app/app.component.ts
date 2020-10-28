@@ -1,6 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { FormControl, FormGroup } from '@angular/forms';
-import { HttpClient } from '@angular/common/http';
+import { Reservation, ReservationRequest, ReservationService } from './reservation.service';
 
 @Component({
   selector: 'app-root',
@@ -10,19 +10,63 @@ import { HttpClient } from '@angular/common/http';
 export class AppComponent implements OnInit {
   title = 'reservation-app';
 
-  constructor(private http: HttpClient) {}
+  constructor(private reservationService: ReservationService) { }
 
-  private baseUrl: string = 'http://localhost:8080';
-  private reservationUrl: string = this.baseUrl + '/room/v1/reservation/';
-
-  rooms: Room [];
+  rooms: Room[];
+  roomSearchForm: FormGroup;
+  currentCheckInVal: string;
+  currentCheckOutVal: string;
+  currentPrice: number;
+  currentRoomNumber: number;
+  currentReservations: Reservation[];
 
   ngOnInit(): void {
-    this.rooms = [ 
+
+    this.roomSearchForm = new FormGroup({
+      checkin: new FormControl(''),
+      checkout: new FormControl(''),
+      roomNumber: new FormControl('')
+    });
+
+    this.roomSearchForm.valueChanges.subscribe(form => {
+      console.log(form.checkin);
+      this.currentCheckInVal = form.checkin;
+      console.log(form.checkout);
+      this.currentCheckOutVal = form.checkout;
+
+      console.log(form.roomNumber);
+      if (form.roomNumber) {
+        const roomValues: string[] = form.roomNumber.split('|');
+        this.currentRoomNumber = Number(roomValues[0]);
+        this.currentPrice = Number(roomValues[1]);
+      }
+    });
+
+    this.rooms = [
       new Room('127', '127', '150'),
       new Room('138', '138', '180'),
       new Room('254', '254', '200')
     ];
+
+    this.getCurrentReservations();
+  }
+
+  getCurrentReservations(): void {
+    this.reservationService.getReservations()
+      .subscribe(getResult => {
+        console.log(getResult);
+        this.currentReservations = getResult;
+      });
+  }
+
+  createReservation(): void {
+    this.reservationService.createReservation(
+      new ReservationRequest(this.currentRoomNumber, this.currentCheckInVal,
+        this.currentCheckOutVal, this.currentPrice)
+    ).subscribe(postResult => {
+      console.log(postResult);
+      this.getCurrentReservations();
+    });
   }
 
 }
